@@ -7,6 +7,10 @@ const util = require ("gulp-util");
 const htmlmin = require ("gulp-htmlmin");
 const cleaner = require ("gulp-clean");
 const { exec } = require('child_process');
+// const mocha = require("gulp-mocha");
+const istanbulReport = require("gulp-istanbul-report");
+const mochaPhantom = require("gulp-mocha-phantomjs");
+
 
 gulp.task("tslint", (cb) => {
     pump([
@@ -105,6 +109,46 @@ gulp.task("minifyStatic", ["staticFiles"], (cb) => {
         } else {
             util.log("Finished Minifying Static Files.");
             cb();
+        }
+    });
+});
+
+gulp.task("test",(cb) => {
+    function errorHandle (error) {
+        if (error) {
+            util.log("Error "+ error);
+            cb(error);
+        } else {
+            util.log("Finished Minifying Static Files.");
+            cb();
+        }
+    }
+
+    const coverageFile = `${__dirname}/coverage/coverage.json`;
+    const mochaPhantomOpts = {
+      phantomjs: {
+        hooks: 'mocha-phantomjs-istanbul',
+        coverageFile: coverageFile 
+      },
+    };
+
+    exec(`tsc ${__dirname}/test/*.ts --allowJS --jsx preserve`, (error) => {
+        if (error) {
+            errorHandle(error);
+        } else {
+            pump([
+                gulp.src(`${__dirname}/test/**/*.js`,{read:false}),
+                mochaPhantom(mochaPhantomOpts),
+                gulp.src(coverageFile),
+                istanbulReport(),
+                
+            ],(error) => {
+                if (error) {
+                    errorHandle(error);
+                } else {
+                    exec(`rm ${__dirname}/test/*.js`,errorHandle);
+                }
+            });
         }
     });
 });
