@@ -10,6 +10,20 @@ const { exec } = require('child_process');
 const istanbulReport = require("gulp-istanbul-report");
 const mochaPhantom = require("gulp-mocha-phantomjs");
 
+
+const electronCLI = `${__dirname}/node_modules/electron/cli.js`;
+const testFolder = `${__dirname}/test/`;
+const distFolder = `${__dirname}/dist/`;
+const libFolder = `${__dirname}/lib/`;
+const distStyleFolder = `${distFolder}/styles/`;
+const distViewFolder = `${distFolder}/views/`;
+const libStyleFolder = `${libFolder}/styles/`;
+const libViewFolder = `${libFolder}/views/`;
+const coverageFile = `${testFolder}coverage.json`;
+const jsWildCard = "**/*.js`";
+const tsWildCard = "**/*.ts";
+const folderWildCard = "**";
+
 function errorHandle (cb, error) {
     if (error) {
         util.log("Error "+ error);
@@ -21,10 +35,8 @@ function errorHandle (cb, error) {
 
 gulp.task("clean", (cb) => {
     pump([
-        gulp.src("dist/**"),
-        cleaner({
-            read: false
-        })
+        gulp.src(`${distFolder}${folderWildCard}`),
+        cleaner({read: false})
     ],(error) => {
         errorHandle(cb, error);
     });
@@ -32,26 +44,26 @@ gulp.task("clean", (cb) => {
 
 gulp.task("typescript", ["clean"], (cb) => {
     pump([
-        gulp.src("lib/*.ts"),
+        gulp.src(`${libFolder}${tsWildCard}`),
         tslint({
             formatter: "verbose",
             configuration: "tslint.json"
         }),
         tslint.report(),
-        gulp.src("lib/**/*.ts"),
+        gulp.src(`${libFolder}${tsWildCard}`),
         tsc(),
         uglifyjs(),
-        gulp.dest("dist/")
+        gulp.dest(`${distFolder}`)
     ],(error) => {
         errorHandle(cb, error);
     });
 });
 
 gulp.task("staticFiles", ["clean"], (cb) => {
-    exec(`mkdir ${__dirname}/dist/views`);
-    exec(`mkdir ${__dirname}/dist/styles`);
+    exec(`mkdir ${distViewFolder}`);
+    exec(`mkdir ${distStyleFolder}`);
     pump([
-        gulp.src("lib/views/**"),
+        gulp.src(`${libViewFolder}${folderWildCard}`),
         htmlmin({
             caseSensitive: true,
             collapseWhitespace: true,
@@ -61,17 +73,16 @@ gulp.task("staticFiles", ["clean"], (cb) => {
             removeScriptTypeAttributes: true,
             useShortDoctype: true
         }), 
-        gulp.dest("dist/views"),
-        gulp.src("lib/styles/**"),
+        gulp.dest(`${distViewFolder}`),
+        gulp.src(`${libStyleFolder}${folderWildCard}`),
         htmlmin(),
-        gulp.dest("dist/styles")
+        gulp.dest(`${distStyleFolder}`)
     ],(error) => {
         errorHandle(cb, error);
     });
 });
 
 gulp.task("test",(cb) => {
-    const coverageFile = `${__dirname}/coverage/coverage.json`;
     const mochaPhantomOpts = {
       phantomjs: {
         hooks: 'mocha-phantomjs-istanbul',
@@ -79,30 +90,25 @@ gulp.task("test",(cb) => {
       },
     };
 
-    exec(`tsc ${__dirname}/test/*.ts --allowJS --jsx preserve`, (error) => {
-        if (error) {
-            errorHandle(error, cb);
-        } else {
-            pump([
-                gulp.src(`${__dirname}/test/**/*.js`,{read:false}),
-                mochaPhantom(mochaPhantomOpts),
-                gulp.src(coverageFile),
-                istanbulReport()
-            ],(error) => {
-                if (error) {
-                    errorHandle(cb, error);
-                } else {
-                    exec(`rm ${__dirname}/test/*.js`,(error) => {
-                        errorHandle(cb, error);
-                    });
-                }
-            });
-        }
+    pump([
+        gulp.src(`${testFolder}${tsWildCard}`),
+        tsc(),
+        gulp.dest(`${testFolder}`),
+        gulp.src(`${testFolder}${folderWildCard}`)
+        .pipe(mochaPhantom(mochaPhantomOpts))
+        .on("finish", () => {
+            gulp.src(coverageFile)
+            .pipe(istanbulReport());
+        }),
+        // gulp.src(`${testFolder}${jsWildCard}`),
+        // cleaner({read:false})
+    ],(error) => {
+        errorHandle(cb, error);
     });
 });
 
 gulp.task('default',["clean", "typescript", "staticFiles"], (cb) => {
-    exec(`${__dirname}/node_modules/electron/cli.js ${__dirname}/dist/main.js`,(error, stdout, stderr) => {
+    exec(`${electronCLI} ${distFolder}main.js`,(error, stdout, stderr) => {
         util.log(stdout);
         util.log("");
         util.log(stderr);
