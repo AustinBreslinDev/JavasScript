@@ -54,12 +54,7 @@ class Main {
      */
     private onWindowAllClosed(): void {
         if (process.platform !== "darwin") {
-            try {
-                app.quit();
-            } catch (error) {
-                // tslint:disable-next-line:no-console
-                console.error(error);
-            }
+            app.quit();
         }
     }
 
