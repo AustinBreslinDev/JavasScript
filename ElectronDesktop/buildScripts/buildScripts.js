@@ -170,19 +170,16 @@ module.exports =  (() => {
     }
     
     buildScripts.prototype.deleteFolderRecurive = (folderToDelete) => {
-        folderToDelete = verifyTrailingSlash(folderToDelete) + folderWildCard;
-        if (folderToDelete.indexOf(__dirname) !== -1) {
-            util.log(`Deleting ${folderToDelete}`);
-            del([folderToDelete])
-            .then( (result) => {
-                util.log(`Finished deltion result = ${result}`);
-            })
-            .catch( (error) => {
-                util.log(`Finished deltion with error = ${error}`);
-            });
-        } else {
-            util.log(`No folder by name ${folderToDelete} exists for deletion.`);
-        }
+        folderToDelete = verifyTrailingSlash(folderToDelete);
+        
+        util.log(`Deleting ${folderToDelete}`);
+        del([folderToDelete])
+        .then( (result) => {
+            util.log(`Finished deltion result = ${result}`);
+        })
+        .catch( (error) => {
+            util.log(`Finished deltion with error = ${error}`);
+        });
         return util.noop({});
     }
 
