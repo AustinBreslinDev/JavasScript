@@ -68,6 +68,7 @@ module.exports =  (() => {
                 .pipe(gulp.dest(destination))
             );
         } else {
+            util.log(`No TS files in ${sourceFolder} were found for compiling.`);
             return util.noop({});
         }
     }
@@ -93,8 +94,10 @@ module.exports =  (() => {
                 .pipe(util.log(`Moving static html from ${sourceFolder}`) == 1 ? util.noop() : util.noop())
                 .pipe(minify ? htmlmin(htmlMinOptions) : util.noop())
                 .pipe(util.log(`Moving static html to ${destination}`) == 1 ? util.noop() : util.noop())
+                .pipe(gulp.dest(destination))
             );
         } else {
+            util.log(`No HTML Files in folde ${sourceFolder} were found for copying.`);
             return (
                 util.noop({})
             );
@@ -110,10 +113,12 @@ module.exports =  (() => {
             return (
                 gulp.src(`${sourceFolder}${folderWildCard}/*.css`)
                 .pipe(util.log(`Moving static css from ${sourceFolder}`) == 1 ? util.noop() : util.noop())
-                .pipe(minify ? util.noop() : util.noop())
+                .pipe(minify ? util.noop() : util.noop()) // in here until minify added
                 .pipe(util.log(`Moving static css to ${destination}`) == 1 ? util.noop() : util.noop())
+                .pipe(gulp.dest(destination))
             );
         } else {
+            util.log(`No CSS files in folder ${sourceFolder} were found for copying.`);
             return (
                 util.noop({})
             );
@@ -143,8 +148,10 @@ module.exports =  (() => {
                 .pipe(tsc(tscOptions))
                 .pipe(minify ? uglifyjs(minifyOptions) : util.noop())
                 .pipe(util.log(`Moving Compiled TSX Files to ${destination}`) == 1 ? util.noop() : util.noop())
+                .pipe(gulp.dest(destination))
             );
         } else {
+            util.log(`No tsx files were found to compile.`);
             return (
                 util.noop({})
             );
@@ -156,6 +163,8 @@ module.exports =  (() => {
         let doesExist = fs.existsSync(folderToMake);
         if (!doesExist) {
             fs.mkdirSync(folderToMake);
+        } else {
+            util.log(`Folder by name ${folderToMake} already exists`);
         }
         return util.noop({});
     }
@@ -171,6 +180,8 @@ module.exports =  (() => {
             .catch( (error) => {
                 util.log(`Finished deltion with error = ${error}`);
             });
+        } else {
+            util.log(`No folder by name ${folderToDelete} exists for deletion.`);
         }
         return util.noop({});
     }
