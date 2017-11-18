@@ -1,119 +1,100 @@
 const gulp = require ("gulp");
-const tsc = require ("gulp-tsc");
-const tslint = require ("gulp-tslint");
-const uglifyjs = require ("gulp-uglify");
 const pump = require ("pump");
-const util = require ("gulp-util");
-const htmlmin = require ("gulp-htmlmin");
-const cleaner = require ("gulp-clean");
-const { exec } = require('child_process');
-const istanbulReport = require("gulp-istanbul-report");
-const mochaPhantom = require("gulp-mocha-phantomjs");
-
+const { exec } = require ('child_process');
+const istanbul = require ("gulp-istanbul");
+const mocha = require ("gulp-mocha");
+const buildScripts = require ("./buildScripts/buildScripts");
 
 const electronCLI = `${__dirname}/node_modules/electron/cli.js`;
 const testFolder = `${__dirname}/test/`;
 const distFolder = `${__dirname}/dist/`;
 const libFolder = `${__dirname}/lib/`;
-const distStyleFolder = `${distFolder}/styles/`;
-const distViewFolder = `${distFolder}/views/`;
-const libStyleFolder = `${libFolder}/styles/`;
-const libViewFolder = `${libFolder}/views/`;
-const coverageFile = `${testFolder}coverage.json`;
-const jsWildCard = "**/*.js`";
-const tsWildCard = "**/*.ts";
-const folderWildCard = "**";
-
-function errorHandle (cb, error) {
-    if (error) {
-        util.log("Error "+ error);
-        cb(error);
-    } else {
-        cb();
-    }
-}
+const tempFolder = `${__dirname}/tempFolder/`;
 
 gulp.task("clean", (cb) => {
     pump([
-        gulp.src(`${distFolder}${folderWildCard}`),
-        cleaner({read: false})
+        buildScripts.deleteFolderRecurive(distFolder),
+        buildScripts.deleteFolderRecurive(tempFolder),
     ],(error) => {
-        errorHandle(cb, error);
+        buildScripts.errorHandle(cb, error);
     });
 });
 
-gulp.task("typescript", ["clean"], (cb) => {
+gulp.task("build-pre-copy", (cb) => {
     pump([
-        gulp.src(`${libFolder}${tsWildCard}`),
-        tslint({
-            formatter: "verbose",
-            configuration: "tslint.json"
-        }),
-        tslint.report(),
-        gulp.src(`${libFolder}${tsWildCard}`),
-        tsc(),
-        uglifyjs(),
-        gulp.dest(`${distFolder}`)
+        buildScripts.deleteFolderRecurive(distFolder),
+        buildScripts.makeFolder(distFolder)
     ],(error) => {
-        errorHandle(cb, error);
+        buildScripts.errorHandle(cb, error);
     });
 });
 
-gulp.task("staticFiles", ["clean"], (cb) => {
-    exec(`mkdir ${distViewFolder}`);
-    exec(`mkdir ${distStyleFolder}`);
+gulp.task("build-copy", (cb) => {
+    let minify = true;
     pump([
-        gulp.src(`${libViewFolder}${folderWildCard}`),
-        htmlmin({
-            caseSensitive: true,
-            collapseWhitespace: true,
-            html5: true,
-            removeComments: true,
-            removeEmptyAttributes: true,
-            removeScriptTypeAttributes: true,
-            useShortDoctype: true
-        }), 
-        gulp.dest(`${distViewFolder}`),
-        gulp.src(`${libStyleFolder}${folderWildCard}`),
-        htmlmin(),
-        gulp.dest(`${distStyleFolder}`)
+        buildScripts.copyHTMLFiles(libFolder, distFolder, minify),
+        gulp.dest(distFolder),
+        buildScripts.copyCSSFiles(libFolder, distFolder, minify),
+        gulp.dest(distFolder),
     ],(error) => {
-        errorHandle(cb, error);
+        buildScripts.errorHandle(cb, error);
     });
 });
 
-gulp.task("test",(cb) => {
-    const mochaPhantomOpts = {
-      phantomjs: {
-        hooks: 'mocha-phantomjs-istanbul',
-        coverageFile: coverageFile 
-      },
-    };
-
+gulp.task("build", ["build-copy"], (cb) => {
+    let minify = true;
     pump([
-        gulp.src(`${testFolder}${tsWildCard}`),
-        tsc(),
-        gulp.dest(`${testFolder}`),
-        gulp.src(`${testFolder}${folderWildCard}`)
-        .pipe(mochaPhantom(mochaPhantomOpts))
-        .on("finish", () => {
-            gulp.src(coverageFile)
-            .pipe(istanbulReport());
-        }),
-        // gulp.src(`${testFolder}${jsWildCard}`),
-        // cleaner({read:false})
+        buildScripts.copyTSFiles(libFolder, distFolder, minify),
+        gulp.dest(distFolder),
+        buildScripts.copyTSXFiles(libFolder, distFolder, minify),
+        gulp.dest(distFolder),
     ],(error) => {
-        errorHandle(cb, error);
+        buildScripts.errorHandle(cb, error);
     });
 });
 
-gulp.task('default',["clean", "typescript", "staticFiles"], (cb) => {
-    exec(`${electronCLI} ${distFolder}main.js`,(error, stdout, stderr) => {
-        util.log(stdout);
-        util.log("");
-        util.log(stderr);
-        util.log("");
-        util.log("Finished Build");
-        errorHandle(cb, error);
+gulp.task("test-copy", (cb) => {
+    let minify= false;
+    pump([
+        buildScripts.copyHTMLFiles(libFolder, tempFolder, minify),
+        gulp.dest(tempFolder),
+        buildScripts.copyCSSFiles(libFolder, tempFolder, minify),
+        gulp.dest(tempFolder),
+    ], (error) => {
+        buildScripts.errorHandle(cb,error);
     });
+});
+
+gulp.task("test", ["test-copy"], (cb) => {
+    let minify = false;
+    pump([
+        buildScripts.makeFolder(tempFolder),
+        buildScripts.copyTSFiles(libFolder, tempFolder, minify),
+        // gulp.dest(tempFolder),
+        buildScripts.copyTSXFiles(libFolder, tempFolder, minify),
+    ],(error) => {
+        buildScripts.errorHandle(cb, error);
+    });
+    
+    // gulp.src(`${tempFolder}${jsWildCard}`, {read:false}),
+    // mocha(),
+    // istanbul.writeReports({
+    //     dir: './coverage',
+    //     reporters: [ 'json', 'text', 'text-summary', 'html' ],
+    //     reportOpts: {
+    //         json: {dir: 'json', file: './coverage/converage.json'},
+    //         html: {
+    //             dir: './coverage/html',
+    //             file: 'coverage.html',
+    //             watermarks: {
+    //                 statements: [ 50, 85 ],
+    //                 lines: [ 50, 85 ],
+    //                 functions: [ 50, 85 ],
+    //                 branches: [ 50, 85 ]
+    //             }
+    //         }
+    //     }
+    // }),
+    // istanbul.enforceThresholds({thresholds: 90})
+    // });
 });

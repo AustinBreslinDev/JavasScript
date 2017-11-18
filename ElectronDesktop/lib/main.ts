@@ -36,6 +36,7 @@ class Main {
         // Work around, as this.onClose was not working and always
         // saying this was not a function. Tried a few other workarounds,
         // this was the least hassel, .bind didn't work also.
+        browserWindow = browserWindow;
         browserWindow = null;
     }
 
