@@ -4,6 +4,9 @@ const tslint = require ("gulp-tslint");
 const uglifyjs = require ("gulp-uglify");
 const util = require ("gulp-util");
 const htmlmin = require ("gulp-htmlmin");
+const mocha = require ("gulp-mocha");
+const istanbul = require ("gulp-istanbul");
+
 const del = require ("del");
 const fs = require ("fs");
 const glob = require ("glob").sync;
@@ -22,7 +25,6 @@ module.exports =  (() => {
 
     let doesGlobPatternMatchesFiles = (globPattern) => {
         let foundFiles = glob(globPattern);
-        util.log(`globPattern ${globPattern} found ${foundFiles.length} number of files`);
         return foundFiles.length > 0;
     }
     
@@ -44,7 +46,7 @@ module.exports =  (() => {
         destination = verifyTrailingSlash(destination);
     
         let tscOptions = {
-            // outDir : destination,
+            outDir : destination,
             // sourceMap: true
         };
     
@@ -171,7 +173,7 @@ module.exports =  (() => {
     
     buildScripts.prototype.deleteFolderRecurive = (folderToDelete) => {
         folderToDelete = verifyTrailingSlash(folderToDelete);
-        
+
         util.log(`Deleting ${folderToDelete}`);
         del([folderToDelete])
         .then( (result) => {
@@ -181,6 +183,44 @@ module.exports =  (() => {
             util.log(`Finished deltion with error = ${error}`);
         });
         return util.noop({});
+    }
+
+    buildScripts.prototype.test = (testFolder) => {
+        let istanbulOptions = {
+            dir: `${testFolder}/coverage`,
+            reporters: [ 'json', 'text', 'text-summary', 'html' ],
+            reportOpts: {
+                json: {dir: `${testFolder}/coverage/json`, file: `coverage.json`},
+                html: {
+                    dir: `${testFolder}/coverage/html`,
+                    file: 'coverage.html',
+                    watermarks: {
+                        statements: [ 50, 85 ],
+                        lines: [ 50, 85 ],
+                        functions: [ 50, 85 ],
+                        branches: [ 50, 85 ]
+                    }
+                }
+            }
+        };
+    
+        // if (doesGlobPatternMatchesFiles(`${testFolder}${jsWildCard}`)) {
+            util.log(`Found tests in ${testFolder}`);
+            return (
+                gulp.src(`${testFolder}`, {read:false})
+                .pipe(util.log(`Executing tests from ${testFolder}`) == 1 ? util.noop() : util.noop())
+                .pipe(mocha())
+                .pipe(util.log(`Analyzing reports from test execution`) == 1 ? util.noop() : util.noop())
+                .pipe(istanbul.writeReports(istanbulOptions))
+                .pipe(util.log(`Writing reports for test execution`) == 1 ? util.noop() : util.noop())
+                .pipe(istanbul.enforceThresholds({thresholds: 80}))
+            );
+        // } else {
+        //     util.log(`No tests found in ${testFolder}`);
+        //     return(
+        //         util.noop({})
+        //     );
+        // }
     }
 
     return new buildScripts();

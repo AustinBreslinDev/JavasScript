@@ -21,17 +21,18 @@ gulp.task("clean", (cb) => {
 });
 
 gulp.task("build-pre-copy", (cb) => {
-    pump([
-        buildScripts.deleteFolderRecurive(distFolder),
-        buildScripts.makeFolder(distFolder)
-    ],(error) => {
-        buildScripts.errorHandle(cb, error);
-    });
+    cb();
+    // pump([
+    //     // buildScripts.deleteFolderRecurive(distFolder),
+    // ],(error) => {
+    //     buildScripts.errorHandle(cb, error);
+    // });
 });
 
-gulp.task("build-copy", ["build-pre-copy"], (cb) => {
+gulp.task("build-copy", ["clean"], (cb) => {
     let minify = true;
     pump([
+        buildScripts.makeFolder(distFolder),
         buildScripts.copyHTMLFiles(libFolder, distFolder, minify),
         buildScripts.copyCSSFiles(libFolder, distFolder, minify),
     ],(error) => {
@@ -49,12 +50,10 @@ gulp.task("build", ["build-copy"], (cb) => {
     });
 });
 
-gulp.task("test-copy", (cb) => {
+gulp.task("test-copy", ["build"], (cb) => {
     let minify= false;
     pump([
         buildScripts.makeFolder(tempFolder),
-        buildScripts.copyHTMLFiles(libFolder, tempFolder, minify),
-        buildScripts.copyCSSFiles(libFolder, tempFolder, minify),
         buildScripts.copyHTMLFiles(testFolder, tempFolder, minify),
         buildScripts.copyCSSFiles(testFolder, tempFolder, minify),
     ], (error) => {
@@ -65,33 +64,10 @@ gulp.task("test-copy", (cb) => {
 gulp.task("test", ["test-copy"], (cb) => {
     let minify = false;
     pump([
-        buildScripts.copyTSFiles(libFolder, tempFolder, minify),
-        buildScripts.copyTSXFiles(libFolder, tempFolder, minify),
         buildScripts.copyTSFiles(testFolder, tempFolder, minify),
         buildScripts.copyTSXFiles(testFolder, tempFolder, minify),
+        buildScripts.test(tempFolder)
     ],(error) => {
         buildScripts.errorHandle(cb, error);
     });
-    
-    // gulp.src(`${tempFolder}${jsWildCard}`, {read:false}),
-    // mocha(),
-    // istanbul.writeReports({
-    //     dir: './coverage',
-    //     reporters: [ 'json', 'text', 'text-summary', 'html' ],
-    //     reportOpts: {
-    //         json: {dir: 'json', file: './coverage/converage.json'},
-    //         html: {
-    //             dir: './coverage/html',
-    //             file: 'coverage.html',
-    //             watermarks: {
-    //                 statements: [ 50, 85 ],
-    //                 lines: [ 50, 85 ],
-    //                 functions: [ 50, 85 ],
-    //                 branches: [ 50, 85 ]
-    //             }
-    //         }
-    //     }
-    // }),
-    // istanbul.enforceThresholds({thresholds: 90})
-    // });
 });

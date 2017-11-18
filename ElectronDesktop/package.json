@@ -1,7 +1,7 @@
 {
     "name": "electrondesktop",
     "version": "0.1.0",
-    "main": "main.js",
+    "main": "dist/main.js",
     "description": "electrondesktop",
     "author": {
         "name": "Austin Breslin",
@@ -16,6 +16,7 @@
         "electron": "^1.7.9"
     },
     "devDependencies": {
+        "@types/chai": "^4.0.5",
         "@types/mocha": "^2.2.44",
         "@types/sinon": "^2.3.7",
         "chai": "^4.1.2",

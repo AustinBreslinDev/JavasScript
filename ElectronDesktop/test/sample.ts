@@ -1,17 +1,27 @@
-import "chai";
-import "chai-as-promised";
-import "mocha";
-import { assert } from "sinon";
+import { expect } from "chai";
+import { Application } from "spectron";
 
-describe("Sample Suite", () => {
+describe("application launch", () => {
+  let app: Application;
 
-    before((callBack: MochaDone) => {
-        setTimeout(() => {
-            callBack();
-        }, 200);
+  beforeEach(() => {
+    app = new Application({
+        args: ["/dist/main.js"],
+        path: "/node_modules/electron/cli.js",
     });
+    app.start();
+  });
 
-    it("Sholud do something", () => {
-        assert.pass(true);
+  afterEach(() => {
+    if (app && app.isRunning()) {
+      app.stop();
+    }
+  });
+
+  it("shows an initial window", () => {
+    return app.client.getWindowCount().then((count) => {
+      expect(count).to.be.equal(count);
     });
+  });
+
 });
