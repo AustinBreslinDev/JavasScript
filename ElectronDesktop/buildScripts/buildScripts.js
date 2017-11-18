@@ -1,0 +1,157 @@
+const gulp = require ("gulp");
+const tsc = require ("gulp-tsc");
+const tslint = require ("gulp-tslint");
+const uglifyjs = require ("gulp-uglify");
+const util = require ("gulp-util");
+const htmlmin = require ("gulp-htmlmin");
+const del = require ("del");
+const fs = require ("fs");
+
+const jsWildCard = "**/*.js`";
+const tsWildCard = "**/*.ts";
+const folderWildCard = "**";
+
+module.exports =  (() => {
+    let verifyTrailingSlash = (folderToCheck) => {
+        if (folderToCheck.lastIndexOf('/') !== folderToCheck.length - 1) {
+            folderToCheck += "/";
+        }
+        return folderToCheck;
+    }
+    
+    function buildScripts () {}
+
+    buildScripts.prototype.errorHandle = (cb, error) => {
+        if (error) {
+            util.log("Error "+ error);
+            cb(error);
+        } else {
+            util.log("Finished with no error");
+            cb();
+        }
+    }
+    
+    
+    buildScripts.prototype.copyTSFiles = (sourceFolder, destination, minify) => {
+        sourceFolder = verifyTrailingSlash(sourceFolder);
+        destination = verifyTrailingSlash(destination);
+    
+        let tscOptions = {
+            // outDir : destination,
+            // sourceMap: true
+        };
+    
+        let minifyOptions = {};
+        
+        let tslintOptions = {
+            formatter: "verbose",
+            configuration: "tslint.json"
+        };
+        
+        let foundAnyFiles = true;
+
+        if (foundAnyFiles) {
+            return (
+                gulp.src(`${sourceFolder}${tsWildCard}`)
+                .pipe(util.log(`TSLint on ${sourceFolder}`) == 1 ? util.noop() : util.noop())
+                .pipe(tslint(tslintOptions))
+                .pipe(tslint.report())
+                .pipe(util.log(`Compliing on ${sourceFolder}`) == 1 ? util.noop() : util.noop())
+                .pipe(tsc(tscOptions))
+                .pipe(minify ? uglifyjs(minifyOptions) : util.noop())
+                .pipe(util.log(`Moving compiled to ${destination}`) == 1 ? util.noop() : util.noop())
+                .pipe(gulp.dest(destination))
+            );
+        } else {
+            return util.noop({});
+        }
+    }
+    
+    buildScripts.prototype.copyHTMLFiles = (sourceFolder, destination, minify) =>{
+        let htmlMinOptions = {
+            caseSensitive: true,
+            collapseWhitespace: true,
+            collapseInlineTagWhitespace: true,
+            html5: true,
+            removeComments: true,
+            removeEmptyAttributes: true,
+            removeScriptTypeAttributes: true,
+            useShortDoctype: true
+        };
+        
+        sourceFolder = verifyTrailingSlash(sourceFolder)
+        destination = verifyTrailingSlash(destination);
+        
+        return (
+            gulp.src(`${sourceFolder}${folderWildCard}/*.html`)
+            .pipe(util.log(`Moving static html from ${sourceFolder}`) == 1 ? util.noop() : util.noop())
+            .pipe(minify ? htmlmin(htmlMinOptions) : util.noop())
+            .pipe(util.log(`Moving static html to ${destination}`) == 1 ? util.noop() : util.noop())
+        );
+    }
+    
+    buildScripts.prototype.copyCSSFiles = (sourceFolder, destination, minify) => {
+        let minifyOptions = {};
+        sourceFolder = verifyTrailingSlash(sourceFolder);
+        destination = verifyTrailingSlash(destination);
+        
+        return (
+            gulp.src(`${sourceFolder}${folderWildCard}/*.css`)
+            .pipe(util.log(`Moving static css from ${sourceFolder}`) == 1 ? util.noop() : util.noop())
+            .pipe(minify ? util.noop() : util.noop())
+            .pipe(util.log(`Moving static css to ${destination}`) == 1 ? util.noop() : util.noop())
+        );
+    }
+    
+    buildScripts.prototype.copyTSXFiles = (sourceFolder, destination, minify) => {
+        let minifyOptions = {};
+        let tscOptions = {};
+        
+        let tslintOptions = {
+            formatter: "verbose",
+            configuration: "tslint.json"
+        };
+        
+        sourceFolder = verifyTrailingSlash(sourceFolder);
+        destination = verifyTrailingSlash(destination);
+        
+        return (
+            gulp.src(`${sourceFolder}${folderWildCard}/*.tsx`)
+            .pipe(util.log(`Searching for TSX Files in ${sourceFolder}`) == 1 ? util.noop() : util.noop())
+            .pipe(tslint(tslintOptions))
+            .pipe(util.log(`Running TS Lint on TSX Files in ${sourceFolder}`) == 1 ? util.noop() : util.noop())
+            .pipe(tslint.report())
+            .pipe(util.log(`Compiling TSX Files in ${sourceFolder}`) == 1 ? util.noop() : util.noop())
+            .pipe(tsc(tscOptions))
+            .pipe(minify ? uglifyjs(minifyOptions) : util.noop())
+            .pipe(util.log(`Moving Compiled TSX Files to ${destination}`) == 1 ? util.noop() : util.noop())
+ 
+        );
+    }
+    
+    buildScripts.prototype.makeFolder = (folderToMake) => {
+        folderToMake = verifyTrailingSlash(folderToMake);
+        let doesExist = fs.existsSync(folderToMake);
+        if (!doesExist) {
+            fs.mkdirSync(folderToMake);
+        }
+        return util.noop({});
+    }
+    
+    buildScripts.prototype.deleteFolderRecurive = (folderToDelete) => {
+        folderToDelete = verifyTrailingSlash(folderToDelete) + folderWildCard;
+        if (folderToDelete.indexOf(__dirname) !== -1) {
+            util.log(`Deleting ${folderToDelete}`);
+            del([folderToDelete])
+            .then( (result) => {
+                util.log(`Finished deltion result = ${result}`);
+            })
+            .catch( (error) => {
+                util.log(`Finished deltion with error = ${error}`);
+            });
+        }
+        return util.noop({});
+    }
+
+    return new buildScripts();
+})();
