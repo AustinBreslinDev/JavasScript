@@ -6,6 +6,7 @@ const util = require ("gulp-util");
 const htmlmin = require ("gulp-htmlmin");
 const del = require ("del");
 const fs = require ("fs");
+const glob = require ("glob").sync;
 
 const jsWildCard = "**/*.js`";
 const tsWildCard = "**/*.ts";
@@ -17,6 +18,12 @@ module.exports =  (() => {
             folderToCheck += "/";
         }
         return folderToCheck;
+    }
+
+    let doesGlobPatternMatchesFiles = (globPattern) => {
+        let foundFiles = glob(globPattern);
+        util.log(`globPattern ${globPattern} found ${foundFiles.length} number of files`);
+        return foundFiles.length > 0;
     }
     
     function buildScripts () {}
@@ -48,9 +55,7 @@ module.exports =  (() => {
             configuration: "tslint.json"
         };
         
-        let foundAnyFiles = true;
-
-        if (foundAnyFiles) {
+        if (doesGlobPatternMatchesFiles(`${sourceFolder}${tsWildCard}`)) {
             return (
                 gulp.src(`${sourceFolder}${tsWildCard}`)
                 .pipe(util.log(`TSLint on ${sourceFolder}`) == 1 ? util.noop() : util.noop())
@@ -82,12 +87,18 @@ module.exports =  (() => {
         sourceFolder = verifyTrailingSlash(sourceFolder)
         destination = verifyTrailingSlash(destination);
         
-        return (
-            gulp.src(`${sourceFolder}${folderWildCard}/*.html`)
-            .pipe(util.log(`Moving static html from ${sourceFolder}`) == 1 ? util.noop() : util.noop())
-            .pipe(minify ? htmlmin(htmlMinOptions) : util.noop())
-            .pipe(util.log(`Moving static html to ${destination}`) == 1 ? util.noop() : util.noop())
-        );
+        if (doesGlobPatternMatchesFiles(`${sourceFolder}${folderWildCard}/*.html`)) {
+            return (
+                gulp.src(`${sourceFolder}${folderWildCard}/*.html`)
+                .pipe(util.log(`Moving static html from ${sourceFolder}`) == 1 ? util.noop() : util.noop())
+                .pipe(minify ? htmlmin(htmlMinOptions) : util.noop())
+                .pipe(util.log(`Moving static html to ${destination}`) == 1 ? util.noop() : util.noop())
+            );
+        } else {
+            return (
+                util.noop({})
+            );
+        }
     }
     
     buildScripts.prototype.copyCSSFiles = (sourceFolder, destination, minify) => {
@@ -95,12 +106,18 @@ module.exports =  (() => {
         sourceFolder = verifyTrailingSlash(sourceFolder);
         destination = verifyTrailingSlash(destination);
         
-        return (
-            gulp.src(`${sourceFolder}${folderWildCard}/*.css`)
-            .pipe(util.log(`Moving static css from ${sourceFolder}`) == 1 ? util.noop() : util.noop())
-            .pipe(minify ? util.noop() : util.noop())
-            .pipe(util.log(`Moving static css to ${destination}`) == 1 ? util.noop() : util.noop())
-        );
+        if (doesGlobPatternMatchesFiles(`${sourceFolder}${folderWildCard}/*.css`)) {
+            return (
+                gulp.src(`${sourceFolder}${folderWildCard}/*.css`)
+                .pipe(util.log(`Moving static css from ${sourceFolder}`) == 1 ? util.noop() : util.noop())
+                .pipe(minify ? util.noop() : util.noop())
+                .pipe(util.log(`Moving static css to ${destination}`) == 1 ? util.noop() : util.noop())
+            );
+        } else {
+            return (
+                util.noop({})
+            );
+        }
     }
     
     buildScripts.prototype.copyTSXFiles = (sourceFolder, destination, minify) => {
@@ -115,18 +132,23 @@ module.exports =  (() => {
         sourceFolder = verifyTrailingSlash(sourceFolder);
         destination = verifyTrailingSlash(destination);
         
-        return (
-            gulp.src(`${sourceFolder}${folderWildCard}/*.tsx`)
-            .pipe(util.log(`Searching for TSX Files in ${sourceFolder}`) == 1 ? util.noop() : util.noop())
-            .pipe(tslint(tslintOptions))
-            .pipe(util.log(`Running TS Lint on TSX Files in ${sourceFolder}`) == 1 ? util.noop() : util.noop())
-            .pipe(tslint.report())
-            .pipe(util.log(`Compiling TSX Files in ${sourceFolder}`) == 1 ? util.noop() : util.noop())
-            .pipe(tsc(tscOptions))
-            .pipe(minify ? uglifyjs(minifyOptions) : util.noop())
-            .pipe(util.log(`Moving Compiled TSX Files to ${destination}`) == 1 ? util.noop() : util.noop())
- 
-        );
+        if (doesGlobPatternMatchesFiles(`${sourceFolder}${folderWildCard}/*.tsx`)) {
+            return (
+                gulp.src(`${sourceFolder}${folderWildCard}/*.tsx`)
+                .pipe(util.log(`Searching for TSX Files in ${sourceFolder}`) == 1 ? util.noop() : util.noop())
+                .pipe(tslint(tslintOptions))
+                .pipe(util.log(`Running TS Lint on TSX Files in ${sourceFolder}`) == 1 ? util.noop() : util.noop())
+                .pipe(tslint.report())
+                .pipe(util.log(`Compiling TSX Files in ${sourceFolder}`) == 1 ? util.noop() : util.noop())
+                .pipe(tsc(tscOptions))
+                .pipe(minify ? uglifyjs(minifyOptions) : util.noop())
+                .pipe(util.log(`Moving Compiled TSX Files to ${destination}`) == 1 ? util.noop() : util.noop())
+            );
+        } else {
+            return (
+                util.noop({})
+            );
+        }
     }
     
     buildScripts.prototype.makeFolder = (folderToMake) => {
